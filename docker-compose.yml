@@ -1,0 +1,149 @@
+version: '2'
+
+services:
+
+  mongos:
+    build: ./mongos
+    image: sm-mongos
+    container_name: sm-router
+    command: --configdb cfg/config1:27017,config2:27017,config3:27017
+    depends_on:
+      - config1
+      - config2
+      - config3
+      - config-repl
+    ports:
+      - "27017:27017"
+
+  mongos-man:
+    build: ./man
+    image: sm-man
+    container_name: sm-mongos-man
+    depends_on:
+      - mongos
+      - shard1-repl
+      - shard2-repl
+    command: shard.sh -a mongos:27017 -r shard1/rs1-1:27017,rs1-2:27017,rs1-3:27017|shard2/rs2-1:27017,rs2-2:27017,rs2-3:27017
+
+  # config server replica set
+  config-repl:
+    build: ./man
+    image: sm-man
+    container_name: sm-cfg-repl
+    depends_on:
+      - config1
+      - config2
+      - config3
+    command: replset.sh -m config1:27017 -s config2:27017,config3:27017 -r cfg
+
+  config1:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-cfg1
+    command: --configsvr --replSet cfg
+    volumes:
+      - /data/square/cfg1:/data/db
+    ports:
+      - "27017"
+
+  config2:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-cfg2
+    command: --configsvr --replSet cfg
+    volumes:
+      - /data/square/cfg2:/data/db
+    ports:
+      - "27017"
+
+  config3:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-cfg3
+    command: --configsvr --replSet cfg
+    volumes:
+      - /data/square/cfg3:/data/db
+    ports:
+      - "27017"
+
+  # shard1 replica set
+  shard1-repl:
+    build: ./man
+    image: sm-man
+    container_name: sm-sh1-repl
+    depends_on:
+      - rs1-1
+      - rs1-2
+      - rs1-3
+    command: replset.sh -m rs1-1:27017 -s rs1-2:27017 -a rs1-3:27017 -r shard1
+
+  rs1-1:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh1-1
+    volumes:
+      - /data/square/rs1_1:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard1
+
+  rs1-2:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh1-2
+    volumes:
+      - /data/square/rs1_2:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard1
+
+  rs1-3:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh1-3
+    volumes:
+      - /data/square/rs1_3:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard1
+
+  # shard2 replica set
+  shard2-repl:
+    build: ./man
+    image: sm-man
+    container_name: sm-sh2-repl
+    depends_on:
+      - rs2-1
+      - rs2-2
+      - rs2-3
+    command: replset.sh -m rs2-1:27017 -s rs2-2:27017 -a rs2-3:27017 -r shard2
+
+  rs2-1:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh2-1
+    volumes:
+      - /data/square/rs2_1:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard2
+
+  rs2-2:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh2-2
+    volumes:
+      - /data/square/rs2_2:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard2
+
+  rs2-3:
+    build: ./mongod
+    image: sm-mongod
+    container_name: sm-sh2-3
+    volumes:
+      - /data/square/rs2_3:/data/db
+    ports:
+      - "27017"
+    command: --shardsvr --replSet shard2
