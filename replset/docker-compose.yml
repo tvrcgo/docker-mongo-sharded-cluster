@@ -1,0 +1,46 @@
+version: '2'
+
+services:
+
+  rs-m:
+    build: ../mongod
+    image: sm-mongod
+    env_file: .env
+    container_name: sm-${RS_NAME}-m
+    volumes:
+      - /data/${RS_NAME}_m:/data/db
+    ports:
+      - "${RS_PORT}:27017"
+    command: --replSet ${RS_NAME}
+
+  rs-s1:
+    build: ../mongod
+    image: sm-mongod
+    env_file: .env
+    container_name: sm-${RS_NAME}-s1
+    volumes:
+      - /data/${RS_NAME}_s1:/data/db
+    ports:
+      - "27017"
+    command: --replSet ${RS_NAME}
+
+  rs-arb:
+    build: ../mongod
+    image: sm-mongod
+    env_file: .env
+    container_name: sm-${RS_NAME}-arb
+    volumes:
+      - /data/${RS_NAME}_arb:/data/db
+    ports:
+      - "27017"
+    command: --replSet ${RS_NAME}
+
+  rs-op:
+    build: ../man
+    image: sm-man
+    env_file: .env
+    depends_on:
+      - rs-m
+      - rs-s1
+      - rs-arb
+    command: replset.sh -m rs-m:27017 -s rs-s1:27017 -a rs-arb:27017 -r ${RS_NAME}
